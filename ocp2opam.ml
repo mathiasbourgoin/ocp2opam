@@ -31,7 +31,7 @@ let url = ref ""
 
 let main () =
   let ocp_arg  = ("-ocp", Arg.String (fun s -> ocp_name := s), 
-                  "name of .ocp file in currecnt directory") 
+                  "name of .ocp file in current directory") 
   and target_arg  = ("-target", Arg.String (fun s -> target := s), 
                   "target folder") 
 
@@ -78,15 +78,13 @@ let run command =
 
 
 let get_package package =
-  run ("ocamlfind list | grep \"^"^package^"[ ]*(")
+  read_process ("ocamlfind list | grep \"^"^package^"[ ]*(\"")
 
 let get_package_version package =
-  read_process (
-    "ocamlfind list | grep \"^"^
-    package^
-    "[ ]*(\"  | sed  's/^"^
-    package^
-    "[ ]* (version\\:[ ]*\\(.*\\))/\\1/\' | tr '\n' ' ' |sed '$s/.$//'")
+  let base =   get_package package in
+  let s =  (Str.split_delim (Str.regexp "  +") base) in
+  List.hd (Str.split_delim (Str.regexp ")") (List.nth s (List.length s - 1)))
+  
 
 let _ =
   let stmts = 
@@ -163,7 +161,7 @@ let _ =
                         " -czf " ^ pwd ^ "/" ^ !target ^"/"^package_name ^" ."  in
           run command;
           print_endline "echo1";
-          md5sum := read_process ("md5sum "^pwd ^ "/" ^ !target ^"/"^package_name^" | cut -f 1,1 -d \" \" | tr '\n' ' ' |sed '$s/.$//'");
+          md5sum := List.hd (Str.split_delim (Str.regexp " +") (read_process ("md5sum "^pwd ^ "/" ^ !target ^"/"^package_name)));
           print_endline "echo2";
         ) !dirname;
       print_endline "echo3";
