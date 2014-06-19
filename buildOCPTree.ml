@@ -1,0 +1,77 @@
+(******************************************************************************)
+(*                                                                            *)
+(*                          TypeRex OCaml Tools                               *)
+(*                                                                            *)
+(*                               OCamlPro                                     *)
+(*                                                                            *)
+(*    Copyright 2011-2012 OCamlPro                                            *)
+(*    All rights reserved.  See accompanying files for the terms under        *)
+(*    which this file is distributed. In doubt, contact us at                 *)
+(*    contact@ocamlpro.com (http://www.ocamlpro.com/)                         *)
+(*                                                                            *)
+(******************************************************************************)
+
+(* open OcpLang *)
+(* open BuildEngineTypes *)
+
+type camlpN =
+  | Camlp4
+  | Camlp5
+
+type package_type =
+  | ProgramPackage
+  | TestPackage
+  (*  | ProjectToplevel *)
+  | LibraryPackage
+  | ObjectsPackage
+  | SyntaxPackage
+  (* TODO:
+     | CObjectPackage (* generate with -output-obj *)
+  *)
+
+and condition =
+  | IsEqualStringList of string * string list
+  | IsTrue of string
+  | NotCondition of condition
+  | AndConditions of condition * condition
+  | OrConditions of condition * condition
+
+type statement =
+    StmtOption of set_option
+  | StmtBlock of statement list
+  | StmtDefineConfig of string * set_option list
+  | StmtDefinePackage of package_type * string * statement list
+  | StmtFilesSet of string_with_attributes list
+  | StmtFilesAppend of string_with_attributes list
+  | StmtTestsSet of string_with_attributes list
+  | StmtTestsAppend of string_with_attributes list
+  | StmtRequiresSet of string_with_attributes list
+  | StmtRequiresAppend of string_with_attributes list
+  | StmtIfThenElse of condition * statement list * statement list option
+  | StmtSyntax of string option * camlpN * string list
+
+and set_option =
+    OptionListSet of string * string list
+  | OptionListAppend of string * string list
+  | OptionListRemove of string * string list
+  | OptionBoolSet of string * bool
+  | OptionConfigSet of string
+  | OptionIfThenElse of condition * set_option list * set_option list option
+  | OptionBlock of set_option list
+(*  | OptionConfigAppend of string *)
+
+and string_with_attributes = string * set_option list
+
+let modname_of_fullname fullname =
+  let modname = Filename.chop_extension (Filename.basename fullname) in
+  modname.[0] <- Char.uppercase modname.[0];
+  modname
+
+let string_of_package_type kind =
+  match kind with
+    ProgramPackage -> "program"
+  | LibraryPackage -> "library"
+  | SyntaxPackage -> "syntax"
+          (*	  | ProjectToplevel -> "toplevel" *)
+  | ObjectsPackage -> "objects"
+  | TestPackage -> "test"
