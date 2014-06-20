@@ -1,6 +1,10 @@
-all:
+all: build
+
+build :
 	ocp-build -init || ocp-build init
 
+clean : 
+	ocp-build clean
 install: 
 	ocp-build -install || ocp-build install
 

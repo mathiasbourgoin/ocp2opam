@@ -161,7 +161,7 @@ let _ =
       let package_path = archive_dir ^ Filename.dir_sep ^ p.package_name ^ "-" ^ !version ^ ".tar.gz" in
       run ("mkdir -p " ^ package_dir);
       run ("mkdir -p " ^ archive_dir);
-      let command = "tar --exclude=_obuild --exclude=ocp-build.root* --exclude=" ^ 
+      let command = "tar --exclude=_obuild --exclude=ocp-build.root* --exclude=.git --exclude=" ^ 
                     p.package_name ^"*"^".tar.gz " ^ 
                     " -czf " ^ package_path ^ " ."  in
       run command;
@@ -175,19 +175,11 @@ let _ =
          List.iter (fun a -> s := !s ^ (Printf.sprintf "%s " a)) p.authors; 
          !s));
       output_string opam_channel ("build: [\n"^
-                     "\t[make \"build\" \"||\" "^
-                     "\"ocp-build\" \"-init\" \"||\" "^
-                     "\"ocp-build\" \"init\"]\n"^
-                     "\t[make \"install\" \"||\" "^
-                     "\"ocp-build\" \"-install\" \"||\" "^
-                     "\"ocp-build\" \"install\"]\n"^
+                     "\t[make \"build\"]\n"^ 
+                     "\t[make \"install\"]\n"^
                      "]\n");
       output_string opam_channel ("remove: [\n"^
-                     "\t[make \"uninstall\" \"||\" "^
-                     "\"ocp-build\" \"-uninstall\" \"||\" "^
-                     "\"ocp-build\" \"uninstall\"]\n"^
-                     "\t[\"ocamlfind\" \"remove\" \""^
-                     p.package_name^"\"]\n"^
+                     "\t[make \"uninstall\"]\n"^
                      "]\n");
       output_string opam_channel (Printf.sprintf"depends: [ %s ] \n" 
         (let s = ref "" in
