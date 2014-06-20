@@ -163,7 +163,7 @@ let _ =
       run ("mkdir -p " ^ archive_dir);
       let command = "tar --exclude=_obuild --exclude=ocp-build.root* --exclude=.git --exclude=" ^ 
                     p.package_name ^"*"^".tar.gz " ^ 
-                    " -czf " ^ package_path ^ " ."  in
+                    " -czf " ^ package_path ^ " " ^ (Filename.parent_dir_name ^ Filename.dir_sep ^Filename.basename project_dir)  in
       run command;
       md5sum := List.hd (Str.split_delim (Str.regexp " +") (read_process ("md5sum "^package_path)));
       let opam_channel = open_out (to_path [package_dir;"opam"]) in

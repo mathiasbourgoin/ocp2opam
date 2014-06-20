@@ -5,8 +5,8 @@ build :
 
 clean : 
 	ocp-build clean
-install: 
+install : 
 	ocp-build -install || ocp-build install
 
-uninstall:
+uninstall :
 	ocp-build -uninstall || ocp-build uninstall
