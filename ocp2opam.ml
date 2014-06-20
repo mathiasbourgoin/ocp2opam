@@ -96,8 +96,11 @@ let get_package_version package =
 
   
 let to_path l = 
-  List.fold_left (fun a b -> a ^ Filename.dir_sep ^ b) "" l
-
+  match l with
+  | [] ->  ""
+  |t ::q ->
+    List.fold_left (fun a b -> a ^ Filename.dir_sep ^ b) t q
+    
 let _ =
   let stmts = 
     BuildOCPParse.read_ocamlconf !ocp_name in
@@ -156,8 +159,8 @@ let _ =
       Sys.chdir pwd; Sys.chdir (List.hd !dirname);
       let project_dir = (Sys.getcwd ()) in
       ignore (Unix.system "ocp-build clean");
-      let package_dir = to_path [pwd; !target;"packages";p.package_name;p.package_name ^ "." ^ !version]  
-      and archive_dir = to_path [pwd; !target; "archives"] in
+      let package_dir = to_path [!target;"packages";p.package_name;p.package_name ^ "." ^ !version]  
+      and archive_dir = to_path [!target; "archives"] in
       let package_path = archive_dir ^ Filename.dir_sep ^ p.package_name ^ "-" ^ !version ^ ".tar.gz" in
       run ("mkdir -p " ^ package_dir);
       run ("mkdir -p " ^ archive_dir);
@@ -181,7 +184,7 @@ let _ =
       output_string opam_channel ("remove: [\n"^
                      "\t[make \"uninstall\"]\n"^
                      "]\n");
-      output_string opam_channel (Printf.sprintf"depends: [ %s ] \n" 
+      output_string opam_channel (Printf.sprintf"depends: [ \"ocp-build\" %s ] \n" 
         (let s = ref "" in
          List.iter (fun r -> 
              s := !s ^ 

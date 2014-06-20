@@ -1,5 +1,3 @@
-version = ["20140620"]
-version = ["20140620"]
 descr=["Fantastic .ocp to opam package generator"]
 authors = [ "Mathias Bourgoin <mathias.bourgoin@lip6.fr>" ]
 license = [ "Cecill-B" ]
