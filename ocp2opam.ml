@@ -83,8 +83,13 @@ let get_package package =
 let get_package_version package =
   let base =   get_package package in
   let s =  (Str.split_delim (Str.regexp "  +") base) in
-  List.hd (Str.split_delim (Str.regexp ")") (List.nth s (List.length s - 1)))
+  let r = List.hd (Str.split_delim (Str.regexp ")") (List.nth s (List.length s - 1))) in
+  let r = List.fold_left (fun a b -> a ^b) "" (Str.split_delim (Str.regexp "(version: ") r) in
+  print_endline r;
+  r
   
+let to_path l = 
+  List.fold_left (fun a b -> a ^ Filename.dir_sep ^ b) "" l
 
 let _ =
   let stmts = 
@@ -132,14 +137,6 @@ let _ =
   parse_statements None stmts;
   let pwd = Sys.getcwd () in
 
-
-(*  List.iter (fun s ->  
-      Sys.chdir pwd; Sys.chdir s; 
-      let project_dir = (Sys.getcwd ()) in
-      ignore (Unix.system "ocp-build clean");
-      Sys.chdir pwd;
-      run ("mkdir -p " ^ !target);      
-    ) !dirname;*)
   List.iter (fun p ->
       print_endline ("preparing opam package : "^p.package_name);
       let package_name = p.package_name ^ "_" ^
@@ -147,43 +144,44 @@ let _ =
                          
       and md5sum = ref "" in
       List.iter print_endline !dirname;
-      List.iteri (fun i s -> 
-          print_endline "echo0";
-          Sys.chdir pwd; Sys.chdir (if i > 0 then
-                                      (List.hd !dirname)^"/"^s
-                                    else s); 
-          let project_dir = (Sys.getcwd ()) in
-          ignore (Unix.system "ocp-build clean");
-          
-          run ("mkdir -p " ^ pwd ^"/"^ !target^"/"^p.package_name);      
-          let command = "tar --exclude=_obuild --exclude=ocp-build.root* --exclude=" ^ 
-                        p.package_name ^ "_"^ !version ^".tar.gz " ^ 
-                        " -czf " ^ pwd ^ "/" ^ !target ^"/"^package_name ^" ."  in
-          run command;
-          print_endline "echo1";
-          md5sum := List.hd (Str.split_delim (Str.regexp " +") (read_process ("md5sum "^pwd ^ "/" ^ !target ^"/"^package_name)));
-          print_endline "echo2";
-        ) !dirname;
+(*      List.iteri (fun i s -> *)
+      print_endline "echo0";
+      Sys.chdir pwd; Sys.chdir (List.hd !dirname);
+      let project_dir = (Sys.getcwd ()) in
+      ignore (Unix.system "ocp-build clean");
+      let package_dir = to_path [pwd; !target;"packages";p.package_name;p.package_name ^ "." ^ !version]  
+      and archive_dir = to_path [pwd; !target; "archives"] in
+      let package_path = archive_dir ^ Filename.dir_sep ^ p.package_name ^ "-" ^ !version ^ ".tar.gz" in
+      run ("mkdir -p " ^ package_dir);
+      run ("mkdir -p " ^ archive_dir);
+      let command = "tar --exclude=_obuild --exclude=ocp-build.root* --exclude=" ^ 
+                    p.package_name ^"*"^".tar.gz " ^ 
+                    " -czf " ^ package_path ^ " ."  in
+      run command;
+      print_endline "echo1";
+      md5sum := List.hd (Str.split_delim (Str.regexp " +") (read_process ("md5sum "^package_path)));
+      print_endline "echo2";
+  (*  ) !dirname;*)
       print_endline "echo3";
-      let opam_channel = open_out (pwd ^ "/" ^ !target ^"/"^ p.package_name ^"/opam") in
-      let descr_channel = open_out (pwd ^ "/" ^ !target ^"/"^ p.package_name ^"/descr") in
-      let url_channel = open_out (pwd ^ "/" ^ !target ^"/"^ p.package_name ^"/url") in
-      output_string opam_channel (Printf.sprintf "opam version: \"%s\" \n" !version);
+      let opam_channel = open_out (to_path [package_dir;"opam"]) in
+      let descr_channel = open_out (to_path [package_dir;"descr"]) in
+      let url_channel = open_out (to_path [package_dir;"url"]) in
+      output_string opam_channel (Printf.sprintf "opam-version: \"1\" \n");
       output_string opam_channel (Printf.sprintf "maintainer: \"%s\" \n" 
         (let s = ref "" in
          List.iter (fun a -> s := !s ^ (Printf.sprintf "%s " a)) p.authors; 
          !s));
       output_string opam_channel ("build: [\n"^
-                     "\t[make \"build\" || "^
-                     "\"ocp-build\" \"-init\" || "^
+                     "\t[make \"build\" \"||\" "^
+                     "\"ocp-build\" \"-init\" \"||\" "^
                      "\"ocp-build\" \"init\"]\n"^
-                     "\t[make \"install\" || "^
-                     "\"ocp-build\" \"-install\" || "^
+                     "\t[make \"install\" \"||\" "^
+                     "\"ocp-build\" \"-install\" \"||\" "^
                      "\"ocp-build\" \"install\"]\n"^
                      "]\n");
       output_string opam_channel ("remove: [\n"^
-                     "\t[make \"uninstall\" || "^
-                     "\"ocp-build\" \"-uninstall\" || "^
+                     "\t[make \"uninstall\" \"||\" "^
+                     "\"ocp-build\" \"-uninstall\" \"||\" "^
                      "\"ocp-build\" \"uninstall\"]\n"^
                      "\t[\"ocamlfind\" \"remove\" \""^
                      p.package_name^"\"]\n"^
@@ -200,15 +198,16 @@ let _ =
            ) p.requires; 
          !s));
       
-      output_string descr_channel "Opam package generated by ocp2opam\n";
+      List.iter (fun s -> output_string descr_channel (Printf.sprintf "%s. " s)) !descr;
+      output_string descr_channel "\nOpam package generated by ocp2opam\n";
       output_string descr_channel ((String.capitalize p.package_type)^" :  "^p.package_name^"\n");
-      output_string descr_channel ("by :  \n\t"^
+      output_string descr_channel ("by :\t"^
                                    (let rec aux = function
                                       | [] -> "Someone unknown"
                                       | t::[] -> t
                                       | t::q -> t^ "\nand \t"^ aux q
-                                    in aux p.authors)^"\n\n");
-      List.iter (fun s -> output_string descr_channel (Printf.sprintf "%s\n" s)) !descr;
+                                    in aux p.authors)^"\n");
+
 
       output_string url_channel ("archive: \""^ !url ^"/"^package_name^"\"\n");
       output_string url_channel ("checksum: \""^ !md5sum ^ "\"\n");
