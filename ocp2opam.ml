@@ -84,9 +84,8 @@ let get_package_version package =
   let base =   get_package package in
   let s =  (Str.split_delim (Str.regexp "  +") base) in
   let r = List.hd (Str.split_delim (Str.regexp ")") (List.nth s (List.length s - 1))) in
-  let r = List.fold_left (fun a b -> a ^b) "" (Str.split_delim (Str.regexp "(version: ") r) in
-  print_endline r;
-  r
+  List.fold_left (fun a b -> a ^b) "" (Str.split_delim (Str.regexp "(version: ") r) 
+
   
 let to_path l = 
   List.fold_left (fun a b -> a ^ Filename.dir_sep ^ b) "" l
@@ -143,9 +142,7 @@ let _ =
                         !version ^ ".tar.gz"
                          
       and md5sum = ref "" in
-      List.iter print_endline !dirname;
-(*      List.iteri (fun i s -> *)
-      print_endline "echo0";
+
       Sys.chdir pwd; Sys.chdir (List.hd !dirname);
       let project_dir = (Sys.getcwd ()) in
       ignore (Unix.system "ocp-build clean");
@@ -158,11 +155,7 @@ let _ =
                     p.package_name ^"*"^".tar.gz " ^ 
                     " -czf " ^ package_path ^ " ."  in
       run command;
-      print_endline "echo1";
       md5sum := List.hd (Str.split_delim (Str.regexp " +") (read_process ("md5sum "^package_path)));
-      print_endline "echo2";
-  (*  ) !dirname;*)
-      print_endline "echo3";
       let opam_channel = open_out (to_path [package_dir;"opam"]) in
       let descr_channel = open_out (to_path [package_dir;"descr"]) in
       let url_channel = open_out (to_path [package_dir;"url"]) in
