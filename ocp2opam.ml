@@ -1,5 +1,6 @@
 module Parser = BuildOCPParser
 
+
 let read_process command =
   ignore(Unix.system ("echo " ^command));
   let buffer_size = 2048 in
@@ -28,25 +29,29 @@ let version = ref (let open Unix in
     (*(read_process "date +%Y%m%d")*)
 let name = ref ""
 let url = ref ""
+let keep_version = ref false
 
 let main () =
   let ocp_arg  = ("-ocp", Arg.String (fun s -> ocp_name := s), 
                   "name of .ocp file in current directory") 
   and target_arg  = ("-target", Arg.String (fun s -> target := s), 
-                  "target folder") 
+                  "target folder (default \"ocp2opam_packages\")") 
 
   and url_arg  = ("-url", Arg.String (fun s -> url := s), 
-                  "url of repository") 
+                  "url of repository (default \"\")") 
+
+  and version_arg  = ("-version", Arg.String (fun s -> url := s), 
+                  "version (default date yyyymmdd)") 
+
+  and keep_version_arg  = ("-keep", Arg.Bool (fun b -> keep_version := b), 
+                  "keep your .ocp numbered version (default false)") 
 
   in
-  Arg.parse [ocp_arg; target_arg;url_arg] (fun s -> ()) "";
+  Arg.parse [ocp_arg; target_arg;url_arg; version_arg; keep_version_arg] (fun s -> ()) "";
   if !ocp_name = "" then
-    (print_endline ("Usage:\n"^
-    "-ocp name of .ocp file in currecnt directory\n"^
-    "-target target folder\n"^
-    "-help  Display this list of options\n"^
-    "--help  Display this list of options\n");
-     exit 0
+    (
+      print_endline (Arg.usage_string [ocp_arg; target_arg;url_arg; version_arg; keep_version_arg]  "");
+      exit 0
     );
   try 
     let ocp_channel =  open_in !ocp_name in
@@ -73,7 +78,7 @@ type package = {
 
 
 let run command = 
-  ignore(Unix.system ("echo " ^command));
+  print_endline command;
   ignore(Unix.system command)
 
 
@@ -81,10 +86,13 @@ let get_package package =
   read_process ("ocamlfind list | grep \"^"^package^"[ ]*(\"")
 
 let get_package_version package =
-  let base =   get_package package in
+  let base = get_package package in
   let s =  (Str.split_delim (Str.regexp "  +") base) in
-  let r = List.hd (Str.split_delim (Str.regexp ")") (List.nth s (List.length s - 1))) in
-  List.fold_left (fun a b -> a ^b) "" (Str.split_delim (Str.regexp "(version: ") r) 
+  match s with
+  |  [] -> ""
+  | _ ->
+    let r = List.hd (Str.split_delim (Str.regexp ")") (List.nth s (List.length s - 1))) in
+    List.fold_left (fun a b -> a ^b) "" (Str.split_delim (Str.regexp "(version: ") r) 
 
   
 let to_path l = 
@@ -135,10 +143,12 @@ let _ =
   in
   parse_statements None stmts;
   let pwd = Sys.getcwd () in
-
+  if not !keep_version then
+    run ("sed -i \"1iversion = [\\\""^ !version ^ "\\\"]\" " ^ !ocp_name);
+  
   List.iter (fun p ->
       print_endline ("preparing opam package : "^p.package_name);
-      let package_name = p.package_name ^ "_" ^
+      let package_name = p.package_name ^ "-" ^
                         !version ^ ".tar.gz"
                          
       and md5sum = ref "" in
@@ -182,11 +192,14 @@ let _ =
       output_string opam_channel (Printf.sprintf"depends: [ %s ] \n" 
         (let s = ref "" in
          List.iter (fun r -> 
-             s := !s ^ (Printf.sprintf "\"%s\" " (fst r)^
+             s := !s ^ 
                         (let v = get_package_version (fst r) in
-                         if v = "[distributed with Ocaml]" || v = "" then
+                         if v = "[distributed with Ocaml]"  then
                            "" else
-                           Printf.sprintf "{>= \"%s\"} " v)
+                           if  v = "" then
+                             (Printf.sprintf "\"%s\" " (fst r))
+                           else
+                           (Printf.sprintf "\"%s\" {>= \"%s\"}" (fst r) v)
                        )
            ) p.requires; 
          !s));
@@ -207,6 +220,9 @@ let _ =
       close_out opam_channel;
       close_out descr_channel;
       close_out url_channel;
+      if not !keep_version then
+        run ("sed -i 1d "^ !ocp_name ); 
+      
     ) 
     (List.rev !packages);
 
