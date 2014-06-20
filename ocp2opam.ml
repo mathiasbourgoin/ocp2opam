@@ -20,8 +20,8 @@ let target = ref "ocp2opam_package"
 let version = ref (let open Unix in 
                    let tm = gmtime (gettimeofday ()) in
                    Printf.sprintf "%i%s%i" (1900+ tm.tm_year) 
-                     (if tm.tm_mon < 10 then
-                        Printf.sprintf "0%i" tm.tm_mon 
+                     (if tm.tm_mon < 9 then
+                        Printf.sprintf "0%i" (tm.tm_mon +1)
                       else
                         string_of_int tm.tm_mon)
                         tm.tm_mday)
