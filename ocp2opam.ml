@@ -35,11 +35,11 @@ let main () =
   and target_arg  = ("-target", Arg.String (fun s -> target := s), 
                   "target folder") 
 
-  and url  = ("-url", Arg.String (fun s -> url := s), 
+  and url_arg  = ("-url", Arg.String (fun s -> url := s), 
                   "url of repository") 
 
   in
-  Arg.parse [ocp_arg; target_arg] (fun s -> ()) "";
+  Arg.parse [ocp_arg; target_arg;url_arg] (fun s -> ()) "";
   if !ocp_name = "" then
     (print_endline ("Usage:\n"^
     "-ocp name of .ocp file in currecnt directory\n"^
@@ -202,7 +202,7 @@ let _ =
                                     in aux p.authors)^"\n");
 
 
-      output_string url_channel ("archive: \""^ !url ^"/"^package_name^"\"\n");
+      output_string url_channel ("archive: \""^ !url ^"/"^ !version ^"/" ^package_name^"\"\n");
       output_string url_channel ("checksum: \""^ !md5sum ^ "\"\n");
       close_out opam_channel;
       close_out descr_channel;
