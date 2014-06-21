@@ -146,10 +146,11 @@ let _ =
   in
   parse_statements None stmts;
   let pwd = Sys.getcwd () in
-  if not !keep_version then
-    run ("sed -i \"1iversion = [\\\""^ !version ^ "\\\"]\" " ^ !ocp_name);
   
   List.iter (fun p ->
+      if not !keep_version then
+        run ("sed -i \"1iversion = [\\\""^ !version ^ "\\\"]\" " ^ !ocp_name);
+
       print_endline ("preparing opam package : "^p.package_name);
       let package_name = p.package_name ^ "-" ^
                         !version ^ ".tar.gz"
@@ -178,7 +179,7 @@ let _ =
          List.iter (fun a -> s := !s ^ (Printf.sprintf "%s " a)) p.authors; 
          !s));
       output_string opam_channel ("build: [\n"^
-                     "\t[make \"build\" \"]\n"^ 
+                     "\t[make \"build\"]\n"^ 
                      "\t[make \"install\"]\n"^
                      "]\n");
       output_string opam_channel ("remove: [\n"^
