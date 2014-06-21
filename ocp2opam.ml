@@ -178,11 +178,11 @@ let _ =
          List.iter (fun a -> s := !s ^ (Printf.sprintf "%s " a)) p.authors; 
          !s));
       output_string opam_channel ("build: [\n"^
-                     "\t[make \"build\"]\n"^ 
-                     "\t[make \"install\"]\n"^
+                     "\t[make \"build\" \""^p.package_name^"\"]\n"^ 
+                     "\t[make \"install\" \""^p.package_name^"\"]\n"^
                      "]\n");
       output_string opam_channel ("remove: [\n"^
-                     "\t[make \"uninstall\"]\n"^
+                     "\t[make \"uninstall\" \""^p.package_name^"\"]\n"^
                      "]\n");
       output_string opam_channel (Printf.sprintf"depends: [ \"ocp-build\" %s ] \n" 
         (let s = ref "" in
