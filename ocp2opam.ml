@@ -86,13 +86,14 @@ let get_package package =
   read_process ("ocamlfind list | grep \"^"^package^"[ ]*(\"")
 
 let get_package_version package =
-  let base = get_package package in
+  Findlib.package_property [] package  "version"
+(*  let base = get_package package in
   let s =  (Str.split_delim (Str.regexp "  +") base) in
   match s with
   |  [] -> ""
   | _ ->
     let r = List.hd (Str.split_delim (Str.regexp ")") (List.nth s (List.length s - 1))) in
-    List.fold_left (fun a b -> a ^b) "" (Str.split_delim (Str.regexp "(version: ") r) 
+    List.fold_left (fun a b -> a ^b) "" (Str.split_delim (Str.regexp "(version: ") r) *)
 
   
 let to_path l = 
@@ -149,8 +150,14 @@ let _ =
   
   List.iter (fun p ->
       if not !keep_version then
-        run ("sed -i \"1iversion = [\\\""^ !version ^ "\\\"]\" " ^ !ocp_name);
-
+        if  (read_process "uname -s") = "Darwin\n" then
+          (
+            run ("echo \"version = [\\\""^ !version ^ "\\\"]\" >"^ !ocp_name^".tmp");
+            run ("cat "^ !ocp_name ^ " >> " ^ !ocp_name^".tmp");
+            run ("mv "^ !ocp_name ^ ".tmp " ^ !ocp_name)      
+          )
+        else
+          run ("sed -i \"1iversion = [\\\""^ !version ^ "\\\"]\" " ^ !ocp_name);
       print_endline ("preparing opam package : "^p.package_name);
       let package_name = p.package_name ^ "-" ^
                         !version ^ ".tar.gz"
@@ -169,7 +176,11 @@ let _ =
                     p.package_name ^"*"^".tar.gz " ^ 
                     " -czf " ^ package_path ^ " " ^ (Filename.parent_dir_name ^ Filename.dir_sep ^Filename.basename project_dir)  in
       run command;
-      md5sum := List.hd (Str.split_delim (Str.regexp " +") (read_process ("md5sum "^package_path)));
+      md5sum := List.hd (Str.split_delim (Str.regexp " +") 
+                           ( if  (read_process "uname -s") = "Darwin\n" then
+                               read_process ("md5 "^package_path)
+                             else
+                               read_process ("md5sum "^package_path)));
       let opam_channel = open_out (to_path [package_dir;"opam"]) in
       let descr_channel = open_out (to_path [package_dir;"descr"]) in
       let url_channel = open_out (to_path [package_dir;"url"]) in
@@ -217,7 +228,15 @@ let _ =
       close_out descr_channel;
       close_out url_channel;
       if not !keep_version then
-        run ("sed -i 1d "^ !ocp_name ); 
+        if  (read_process "uname -s") = "Darwin\n" then
+          (
+            let nb_lines = List.nth 
+                (Str.split_delim (Str.regexp " +") (read_process ("wc -l " ^ !ocp_name))) 1 in
+            run ("tail -"^ nb_lines ^ " " ^ !ocp_name ^ " > " ^ !ocp_name ^ ".tmp");
+            run ("mv "^ !ocp_name ^ ".tmp " ^ !ocp_name)      
+          )
+        else
+          run ("sed -i 1d "^ !ocp_name ); 
       
     ) 
     (List.rev !packages);
