@@ -1,6 +1,5 @@
 module Parser = BuildOCPParser
 
-
 let read_process command =
   ignore(Unix.system ("echo " ^command));
   let buffer_size = 2048 in
@@ -86,15 +85,7 @@ let get_package package =
   read_process ("ocamlfind list | grep \"^"^package^"[ ]*(\"")
 
 let get_package_version package =
-  Findlib.package_property [] package  "version"
-(*  let base = get_package package in
-  let s =  (Str.split_delim (Str.regexp "  +") base) in
-  match s with
-  |  [] -> ""
-  | _ ->
-    let r = List.hd (Str.split_delim (Str.regexp ")") (List.nth s (List.length s - 1))) in
-    List.fold_left (fun a b -> a ^b) "" (Str.split_delim (Str.regexp "(version: ") r) *)
-
+    Findlib.package_property [] package  "version"
   
 let to_path l = 
   match l with
@@ -201,13 +192,12 @@ let _ =
         (let s = ref "" in
          List.iter (fun r -> 
              s := !s ^ 
-                        (let v = get_package_version (fst r) in
-                         if v = "[distributed with Ocaml]"  then
-                           "" else
-                           if  v = "" then
-                             (Printf.sprintf "\"%s\" " (fst r))
-                           else
-                           (Printf.sprintf "\"%s\" {>= \"%s\"}" (fst r) v)
+                  (  let package = fst r in
+                     match Unix.system ("opam show"^package) with
+                     | Unix.WEXITED 0 (* ocamlfind package exists in opam *) ->
+                       let v = get_package_version (package) in
+                       (Printf.sprintf "\"%s\" {>= \"%s\"}" package v)
+                     | _ -> ""
                        )
            ) p.requires; 
          !s));
