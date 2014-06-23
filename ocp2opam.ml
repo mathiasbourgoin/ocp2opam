@@ -184,7 +184,8 @@ let _ =
       let opam_channel = open_out (to_path [package_dir;"opam"]) in
       let descr_channel = open_out (to_path [package_dir;"descr"]) in
       let url_channel = open_out (to_path [package_dir;"url"]) in
-      output_string opam_channel (Printf.sprintf "opam-version: \"1\" \n");
+      output_string opam_channel (Printf.sprintf "opam-version: \"1.1\" \n");
+      output_string opam_channel ("available: [ ocaml-version = \""^Sys.ocaml_version^"\"]\n");
       output_string opam_channel (Printf.sprintf "maintainer: \"%s\" \n" 
         (let s = ref "" in
          List.iter (fun a -> s := !s ^ (Printf.sprintf "%s " a)) p.authors; 
