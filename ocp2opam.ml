@@ -55,7 +55,7 @@ let main () =
   try 
     let ocp_channel =  open_in !ocp_name in
     Printf.printf "Parsing %s\n%!" !ocp_name;
-    Printf.printf "Will write into  %s\n%!" !version
+    Printf.printf "Generating %s.%s\n%!" !ocp_name !version
   with
   | _ ->
     (Printf.eprintf "%s not found\n%!" !ocp_name;
@@ -85,7 +85,10 @@ let get_package package =
   read_process ("ocamlfind list | grep \"^"^package^"[ ]*(\"")
 
 let get_package_version package =
-    Findlib.package_property [] package  "version"
+    try
+      Findlib.package_property [] package  "version"
+    with
+    | _ -> ""
   
 let to_path l = 
   match l with
@@ -104,7 +107,7 @@ let _ =
   and license = ref [] in
 
   let open BuildOCPTree in
-  let rec parse_option = function
+  let rec parse_option package = function
     | OptionListSet ("dirname" , l) -> 
       dirname := !dirname@l
     | OptionListSet ("authors" , l) -> 
@@ -113,7 +116,13 @@ let _ =
       descr := !descr@l
     | OptionListSet ("license" , l) -> 
       license := !license@l
+    | OptionListSet ("opam_depends" , l) -> 
+      (match package with
+       |  Some p ->  
+         p.requires <- p.requires @ (List.map (fun r -> r,[]) l)
+       |  None -> requires := !requires @ (List.map (fun r -> r,[]) l))
    | _ -> ()
+
   and parse_package pt n l = 
     let pkg = {
       package_type = BuildOCPTree.string_of_package_type pt;
@@ -128,7 +137,7 @@ let _ =
     
   and parse_statements pkg = function
     | [] -> ()
-    | StmtOption l::q -> parse_option l; parse_statements pkg q
+    | StmtOption l::q -> parse_option pkg l; parse_statements pkg q
     | StmtDefinePackage (pt,n,l) :: q-> parse_package pt n l; parse_statements pkg q
     | StmtRequiresSet l :: q -> 
       ( match pkg with 
@@ -193,10 +202,13 @@ let _ =
          List.iter (fun r -> 
              s := !s ^ 
                   (  let package = fst r in
-                     match Unix.system ("opam show"^package) with
+                     match Unix.system ("opam show "^package^" >/dev/null 2>&1") with
                      | Unix.WEXITED 0 (* ocamlfind package exists in opam *) ->
                        let v = get_package_version (package) in
-                       (Printf.sprintf "\"%s\" {>= \"%s\"}" package v)
+                       if v <> "" then
+                         (Printf.sprintf "\"%s\" {>= \"%s\"}" package v)
+                       else
+                         (Printf.sprintf "\"%s\" " package )
                      | _ -> ""
                        )
            ) p.requires; 
