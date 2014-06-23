@@ -4,6 +4,7 @@ build :
 	ocp-build -init || ocp-build init
 
 clean : 
+	rm -f *~ 
 	ocp-build -init
 	ocp-build clean
 install : 
