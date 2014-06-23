@@ -176,11 +176,14 @@ let _ =
                     p.package_name ^"*"^".tar.gz " ^ 
                     " -czf " ^ package_path ^ " " ^ (Filename.parent_dir_name ^ Filename.dir_sep ^Filename.basename project_dir)  in
       run command;
-      md5sum := List.hd (Str.split_delim (Str.regexp " +") 
-                           ( if  (read_process "uname -s") = "Darwin\n" then
-                               read_process ("md5 "^package_path)
-                             else
-                               read_process ("md5sum "^package_path)));
+      md5sum := 
+        if  (read_process "uname -s") = "Darwin\n" then
+          List.nth (Str.split_delim (Str.regexp " +")  
+                      (String.map (fun c -> if c = '\n' then ' ' else c) 
+                         (read_process ("md5 "^package_path)))) 3
+        else
+          List.hd (Str.split_delim (Str.regexp " +") 
+                     (read_process ("md5sum "^package_path)));
       let opam_channel = open_out (to_path [package_dir;"opam"]) in
       let descr_channel = open_out (to_path [package_dir;"descr"]) in
       let url_channel = open_out (to_path [package_dir;"url"]) in
