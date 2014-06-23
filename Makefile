@@ -12,4 +12,4 @@ install :
 
 uninstall :
 	ocp-build -init
-	ocp-build -uninstall || ocp-build uninstall
+	ocp-build -uninstall || ocp-build uninstall || ocamlfind remove ocp2opam
