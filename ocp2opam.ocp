@@ -7,6 +7,6 @@ license = [ "Cecill-B" ]
 
 begin program "ocp2opam"
       files = ["buildOCPTree.ml" "buildOCPParser.mly""ocamllexer.mll" "buildOCPParse.ml" "ocp2opam.ml"]
-      requires = ["unix" "str" "findlib" "opam"]
+      requires = ["unix" "str" "findlib"]
       opam_depends = ["ocamlfind"]
 end

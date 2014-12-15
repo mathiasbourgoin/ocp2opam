@@ -1,5 +1,7 @@
 module Parser = BuildOCPParser
 
+let start_dir = Sys.getcwd ()
+		  
 let read_process command =
   ignore(Unix.system ("echo " ^command));
   let buffer_size = 2048 in
@@ -20,10 +22,9 @@ let target = ref "ocp2opam_package"
 let version = ref (let open Unix in 
                    let tm = gmtime (gettimeofday ()) in
                    Printf.sprintf "%i%s%i" (1900+ tm.tm_year) 
-                     (if tm.tm_mon < 9 then
-                        Printf.sprintf "0%i" (tm.tm_mon +1)
-                      else
-                        string_of_int tm.tm_mon)
+                     (
+                        Printf.sprintf "%s%i" (if tm.tm_mon<9 then "0" else "") (tm.tm_mon +1)
+                      )
                         tm.tm_mday)
     (*(read_process "date +%Y%m%d")*)
 let name = ref ""
@@ -31,7 +32,12 @@ let url = ref ""
 let keep_version = ref false
 
 let main () =
-  let ocp_arg  = ("-ocp", Arg.String (fun s -> ocp_name := s), 
+  let ocp_arg  = ("-ocp", Arg.String (fun s ->
+				      ocp_name :=
+					if Filename.is_relative s then
+					  start_dir ^Filename.dir_sep ^s
+					else
+					  s), 
                   "name of .ocp file in current directory") 
   and target_arg  = ("-target", Arg.String (fun s -> target := s), 
                   "target folder (default \"ocp2opam_packages\")") 
@@ -91,10 +97,15 @@ let get_package_version package =
     | _ -> ""
   
 let to_path l = 
-  match l with
-  | [] ->  ""
-  |t ::q ->
-    List.fold_left (fun a b -> a ^ Filename.dir_sep ^ b) t q
+  let p =
+    match l with
+    | [] ->  ""
+    |t ::q ->
+      List.fold_left (fun a b -> a ^ Filename.dir_sep ^ b) t q
+  in
+  if Filename.is_relative p then
+    start_dir ^ Filename.dir_sep ^ p
+  else p
     
 let _ =
   let stmts = 
@@ -166,13 +177,21 @@ let _ =
 
       Sys.chdir pwd; Sys.chdir (List.hd !dirname);
       let project_dir = (Sys.getcwd ()) in
-      ignore (Unix.system "ocp-build clean");
-      let package_dir = to_path [!target;"packages";p.package_name;p.package_name ^ "." ^ !version]  
+      ignore (Unix.system "make clean");
+      let package_dir = to_path [!target;"packages";p.package_name;p.package_name ^ "." ^ !version]
       and archive_dir = to_path [!target; "archives"] in
-      let package_path = archive_dir ^ Filename.dir_sep ^ p.package_name ^ "-" ^ !version ^ ".tar.gz" in
+      let package_path =
+	(if Filename.is_relative archive_dir then
+	   start_dir ^Filename.dir_sep
+	 else
+	   "" )^
+	  archive_dir ^ Filename.dir_sep ^ p.package_name ^ "-" ^ !version ^ ".tar.gz"
+     in
+     
       run ("mkdir -p " ^ package_dir);
       run ("mkdir -p " ^ archive_dir);
       Sys.chdir Filename.parent_dir_name;
+      print_endline (Sys.getcwd ());
       let command = "tar --exclude=_obuild --exclude=ocp-build.root* --exclude=.git --exclude=" ^ 
                     p.package_name ^"*"^".tar.gz " ^ 
                     " -czf " ^ package_path ^ " " ^ (Filename.basename project_dir)  in
