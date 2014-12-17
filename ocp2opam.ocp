@@ -1,3 +1,6 @@
+version = ["20141217"]
+version = ["20141217"]
+version = ["20141217"]
 descr=["Fantastic .ocp to opam package generator"]
 authors = [ "Mathias Bourgoin <mathias.bourgoin@lip6.fr>" ]
 license = [ "Cecill-B" ]
